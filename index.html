@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>热处理记录纸生成器 · XWG K 0~1300℃ 24h</title>
+<style>
+  :root{--line:#e2e5ea;--ink:#1d2228;--muted:#7a828c;--accent:#1b57b8}
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;font:13px/1.55 "Microsoft YaHei","PingFang SC",sans-serif;color:var(--ink);background:#eceff3}
+  #app{display:flex;height:100%}
+  #panel{width:340px;flex:0 0 340px;background:#fff;border-right:1px solid var(--line);overflow-y:auto;padding:18px 18px 40px}
+  #stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+  canvas{background:#fff;box-shadow:0 6px 24px rgba(20,30,50,.18);max-width:100%;max-height:calc(100vh - 40px);height:auto}
+  h1{font-size:17px;margin:0 0 2px;letter-spacing:.5px}
+  .sub{color:var(--muted);font-size:12px;margin:0 0 16px}
+  section{border-top:1px solid var(--line);padding:14px 0 6px}
+  h2{font-size:12px;font-weight:600;color:#59616b;margin:0 0 10px;letter-spacing:1px}
+  h2 small{font-weight:400;color:var(--muted);letter-spacing:0}
+  .f{display:flex;align-items:center;gap:8px;margin:0 0 8px;min-width:0}
+  .f span{flex:0 0 66px;color:#59616b;font-size:12.5px}
+  .f input,.f select{flex:1;min-width:0;height:30px;border:1px solid #d6dae0;border-radius:5px;padding:0 8px;font:inherit;background:#fff;color:inherit}
+  .f input:focus,.f select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(27,87,184,.12)}
+  .f i{font-style:normal;color:var(--muted);font-size:12px;flex:0 0 auto;width:38px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:0 12px;min-width:0}
+  .grid2 .f{min-width:0}
+  .grid2 .f span{flex:0 0 56px}
+  .grid2 .f i{width:auto}
+  button{font:inherit;height:30px;border:1px solid #d6dae0;background:#fff;border-radius:5px;padding:0 12px;cursor:pointer;color:#333}
+  button:hover{border-color:#b9c0c9;background:#f7f8fa}
+  button.primary{width:100%;height:34px;background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;margin:6px 0 2px}
+  button.primary:hover{background:#174a9e}
+  .btnrow{display:flex;gap:8px;margin-top:8px}
+  .btnrow button{flex:1}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{font-weight:500;color:var(--muted);text-align:left;padding:0 4px 4px;font-size:11.5px}
+  td{padding:2px 4px}
+  td input{width:100%;height:28px;border:1px solid #e0e3e8;border-radius:4px;padding:0 6px;font:inherit;background:#fcfcfd}
+  td input:focus{outline:none;border-color:var(--accent);background:#fff}
+  td.del{width:26px}
+  td.del button{width:24px;height:24px;padding:0;line-height:1;color:#a0a7b0;border-color:transparent;background:transparent;font-size:15px}
+  td.del button:hover{color:#c0392b;background:#fdf0ee;border-color:#f3cdc7}
+  .chk{display:flex;align-items:center;gap:7px;margin:0 0 10px;color:#59616b;font-size:12.5px;cursor:pointer}
+  .chk input{width:15px;height:15px;accent-color:var(--accent)}
+  .hint{color:var(--muted);font-size:11.5px;line-height:1.5;margin:8px 0 0}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="panel">
+    <h1>热处理记录纸生成器</h1>
+    <p class="sub">XWG · K 0~1300℃ · 24h 圆盘记录纸</p>
+
+    <section>
+      <h2>记录纸</h2>
+      <label class="f"><span>版面</span>
+        <select id="sheet">
+          <option value="a4">A4 竖版（210×297）</option>
+          <option value="square">方形图纸</option>
+        </select>
+      </label>
+      <label class="f"><span>圆盘直径</span><input id="dia" type="number" min="100" max="240" step="1" value="190"><i>mm</i></label>
+      <label class="f"><span>输出精度</span>
+        <select id="dpi"><option value="300">300 dpi</option><option value="600">600 dpi</option></select>
+      </label>
+    </section>
+
+    <section>
+      <h2>工艺参数</h2>
+      <div>
+        <label class="f"><span>开始时刻</span><input id="startTime" type="time" value="13:20"></label>
+        <label class="f"><span>装炉温度</span><input id="t0" type="number" value="200"><i>℃</i></label>
+        <label class="f"><span>升温速率</span><input id="rate" type="number" value="200"><i>℃/h</i></label>
+        <label class="f"><span>保温温度</span><input id="th" type="number" value="1080"><i>℃</i></label>
+        <label class="f"><span>保温时间</span><input id="hold" type="number" value="20"><i>min</i></label>
+        <label class="f"><span>冷却到</span><input id="coolTo" type="number" value="40"><i>℃</i></label>
+      </div>
+      <label class="f"><span>冷却方式</span>
+        <select id="cool">
+          <option value="water">水冷（2 min）</option>
+          <option value="air">空冷 / 按速率</option>
+        </select>
+      </label>
+      <label class="f"><span>冷却速度</span><input id="coolRate" type="number" value="30"><i>℃/min</i></label>
+      <button id="gen" class="primary">按工艺生成曲线</button>
+    </section>
+
+    <section>
+      <h2>曲线数据 <small>时刻 / 温度</small></h2>
+      <table>
+        <thead><tr><th>时刻</th><th>温度 ℃</th><th></th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="btnrow">
+        <button id="add">+ 加一行</button>
+        <button id="clear">清空</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>导出</h2>
+      <label class="f"><span>热处理批号</span><input id="batch" value="081260513-03"></label>
+      <label class="f"><span>日期</span><input id="date" value="2026/05/13"></label>
+      <label class="chk"><input type="checkbox" id="blank"> 只导出空白记录纸</label>
+      <button id="export" class="primary">导出 PNG</button>
+      <p class="hint">按所选 dpi 保存，打印尺寸与版面一致。</p>
+    </section>
+  </aside>
+
+  <main id="stage"><canvas id="cv"></canvas></main>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const cv = $("#cv");
+const ctx = cv.getContext("2d");
+const FONT = '"Arial Narrow",Arial,"Microsoft YaHei",sans-serif';
+const HAND = '"KaiTi","STKaiti","Microsoft YaHei",serif';
+
+const state = {
+  sheet: "a4", dia: 190, dpi: 300, blank: false,
+  startTime: "13:20", t0: 200, rate: 200, th: 1080, hold: 20,
+  cool: "water", coolTo: 40, coolRate: 30,
+  batch: "081260513-03", date: "2026/05/13",
+  rows: [
+    { t: "13:20", T: 200 },
+    { t: "17:44", T: 1080 },
+    { t: "18:04", T: 1080 },
+    { t: "18:06", T: 40 },
+  ],
+};
+
+/* ---------- 时间 ---------- */
+function parseTime(s) {
+  const m = /^(\d{1,2})[:：](\d{2})$/.exec(String(s || "").trim());
+  if (!m) return null;
+  const h = +m[1], mi = +m[2];
+  if (h > 47 || mi > 59) return null;
+  return h * 60 + mi;
+}
+function fmtTime(min) {
+  const m = ((Math.round(min) % 1440) + 1440) % 1440;
+  return String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+}
+
+/* ---------- 版面 ---------- */
+function layout() {
+  const U = state.dpi / 25.4;
+  const R = (state.dia / 2) * U;
+  if (state.sheet === "a4") {
+    const W = Math.round(210 * U), H = Math.round(297 * U);
+    return { W, H, cx: Math.round(105 * U), cy: Math.round(150 * U), R, U, page: "a4" };
+  }
+  const W = Math.round(state.dia * 1.2 * U);
+  return { W, H: W, cx: W / 2, cy: W / 2, R, U, page: "square" };
+}
+
+function circle(x, y, r) {
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+}
+
+/* ---------- 空白记录纸 ---------- */
+function drawPaper(g) {
+  const { cx, cy, R, r0, U } = g;
+  const rr = T => r0 + (T / 1300) * (R - r0);
+  ctx.save();
+  ctx.lineCap = "butt";
+
+  for (let T = 20; T <= 1280; T += 20) {
+    const major = T % 200 === 0, mid = T % 100 === 0;
+    ctx.strokeStyle = major ? "#575757" : mid ? "#737373" : "#8a8a8a";
+    ctx.lineWidth = (major ? 0.30 : mid ? 0.20 : 0.13) * U;
+    circle(cx, cy, rr(T));
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "#474747";
+  ctx.lineWidth = 0.36 * U;
+  circle(cx, cy, R);
+  ctx.stroke();
+  ctx.strokeStyle = "#a0a0a0";
+  ctx.lineWidth = 0.08 * U;
+  circle(cx, cy, R * 1.09);
+  ctx.stroke();
+
+  for (let m = 0; m < 1440; m += 10) {
+    const a = Math.PI - (m / 60) * Math.PI / 12;
+    const hour = m % 60 === 0;
+    ctx.strokeStyle = hour ? "#5f5f5f" : "#8a8a8a";
+    ctx.lineWidth = (hour ? 0.24 : 0.13) * U;
+    ctx.beginPath();
+    ctx.moveTo(cx + r0 * Math.cos(a), cy + r0 * Math.sin(a));
+    ctx.lineTo(cx + R * Math.cos(a), cy + R * Math.sin(a));
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  drawTempLabels(g, rr);
+  drawHourLabels(g);
+}
+
+function drawTempLabels(g, rr) {
+  const { cx, cy, R, U, r0 } = g;
+  const size = R * 0.026;
+  const vals = [0];
+  for (let T = 200; T <= 1200; T += 200) vals.push(T);
+  vals.push(1300);
+  ctx.save();
+  ctx.font = `600 ${size}px ${FONT}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (const h of [0, 6, 12, 18]) {
+    const a = Math.PI - h * Math.PI / 12;
+    for (const T of vals) {
+      const r = T === 0 ? r0 + R * 0.045 : rr(T);
+      const w = ctx.measureText(String(T)).width;
+      const gap = U * 1.0, pad = U * 0.8, vpad = T === 0 ? U * 0.45 : U * 0.75;
+      const tx = -(w / 2 + gap);
+      ctx.save();
+      ctx.translate(cx + r * Math.cos(a), cy + r * Math.sin(a));
+      ctx.rotate(a - Math.PI / 2);
+      ctx.fillStyle = "#fff";
+      ctx.fillRect(tx - w / 2 - pad, -size * 0.60 - vpad, w + 2 * pad, size * 1.20 + 2 * vpad);
+      ctx.fillStyle = "#4f4f4f";
+      ctx.fillText(String(T), tx, 0);
+      ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
+function drawHourLabels(g) {
+  const { cx, cy, R } = g;
+  const rad = R * 1.052;
+  const size = R * 0.036;
+  ctx.save();
+  ctx.font = `700 ${size}px Arial,"Microsoft YaHei",sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#3d3d3d";
+  for (let h = 1; h <= 24; h++) {
+    const a = Math.PI - h * Math.PI / 12;
+    ctx.save();
+    ctx.translate(cx + rad * Math.cos(a), cy + rad * Math.sin(a));
+    ctx.rotate(a - Math.PI / 2);
+    ctx.fillText(String(h), 0, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function arcText(cx, cy, radius, a0, a1, text, size, inward) {
+  const chars = [...text];
+  const n = chars.length;
+  ctx.save();
+  ctx.font = `500 ${size}px ${FONT}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillStyle = "#3a3a3a";
+  for (let i = 0; i < n; i++) {
+    const a = a0 + (a1 - a0) * (n === 1 ? 0.5 : i / (n - 1));
+    ctx.save();
+    ctx.translate(cx + radius * Math.cos(a), cy + radius * Math.sin(a));
+    ctx.rotate(a + (inward ? -Math.PI / 2 : Math.PI / 2));
+    ctx.fillText(chars[i], 0, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+}
+
+function drawHub(g) {
+  const { cx, cy, r0, U } = g;
+  ctx.save();
+  ctx.strokeStyle = "#3a3a3a";
+  ctx.lineWidth = 0.45 * U;
+  circle(cx, cy, r0);
+  ctx.stroke();
+  ctx.lineWidth = 0.12 * U;
+  circle(cx, cy, r0 * 0.985);
+  ctx.stroke();
+  ctx.restore();
+
+  const size = r0 * 0.15;
+  arcText(cx, cy, r0 * 0.84, Math.PI * 0.86, Math.PI * 0.26, "K 0～1300℃ XWG", size, true);
+  arcText(cx, cy, r0 * 0.86, Math.PI * 1.545, Math.PI * 1.475, "日期", size * 1.15, true);
+  arcText(cx, cy, r0 * 0.86, Math.PI * 0.115, Math.PI * 0.025, "表号", size * 1.15, true);
+}
+
+/* ---------- 数据曲线 ---------- */
+function series() {
+  const rows = state.rows
+    .map(r => ({ t: parseTime(r.t), T: Number(r.T) }))
+    .filter(r => r.t != null && isFinite(r.T));
+  if (rows.length < 2) return [];
+  let acc = 0, prev = rows[0].t;
+  const out = [];
+  rows.forEach((r, i) => {
+    if (i > 0 && r.t - prev < -720) acc += 1440;
+    prev = r.t;
+    out.push({ h: (acc + r.t) / 60, T: Math.max(0, Math.min(1300, r.T)) });
+  });
+  return out;
+}
+
+function drawCurve(g) {
+  const pts = series();
+  if (pts.length < 2) return;
+  const { cx, cy, R, r0, U } = g;
+  const dense = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const a = pts[i], b = pts[i + 1];
+    const n = Math.max(1, Math.round((b.h - a.h) * 60));
+    for (let k = 0; k < n; k++) {
+      const f = k / n;
+      dense.push({ h: a.h + (b.h - a.h) * f, T: a.T + (b.T - a.T) * f });
+    }
+  }
+  dense.push(pts[pts.length - 1]);
+  ctx.save();
+  ctx.strokeStyle = "#2e2e2e";
+  ctx.lineWidth = 0.5 * U;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  dense.forEach((p, i) => {
+    const a = Math.PI - p.h * Math.PI / 12;
+    const r = r0 + (p.T / 1300) * (R - r0);
+    const x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.stroke();
+  ctx.restore();
+}
+
+/* ---------- 主绘制 ---------- */
+function draw() {
+  const L = layout();
+  cv.width = L.W;
+  cv.height = L.H;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, L.W, L.H);
+  const g = { cx: L.cx, cy: L.cy, R: L.R, U: L.U, r0: L.R * 0.165 };
+  drawPaper(g);
+  if (!state.blank) drawCurve(g);
+  drawHub(g);
+}
+
+/* ---------- 表格 ---------- */
+function renderRows() {
+  const tb = $("#rows");
+  tb.innerHTML = "";
+  state.rows.forEach((r, i) => {
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      `<td><input class="t" type="time" step="60" value="${r.t}"></td>
+       <td><input class="T" type="number" step="1" value="${r.T}"></td>
+       <td class="del"><button title="删除">×</button></td>`;
+    tr.querySelector(".t").addEventListener("input", e => { state.rows[i].t = e.target.value; save(); draw(); });
+    tr.querySelector(".T").addEventListener("input", e => { state.rows[i].T = +e.target.value; save(); draw(); });
+    tr.querySelector(".del").addEventListener("click", () => { state.rows.splice(i, 1); renderRows(); save(); draw(); });
+    tb.appendChild(tr);
+  });
+}
+
+/* ---------- 工艺生成 ---------- */
+function num(id) { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; }
+
+function generate() {
+  const st = parseTime($("#startTime").value);
+  if (st == null) return alert("开始时刻格式应为 HH:MM");
+  const t0 = num("#t0"), th = num("#th"), rate = num("#rate"), hold = num("#hold");
+  const coolTo = num("#coolTo"), coolRate = num("#coolRate");
+  if (th <= t0) return alert("保温温度应高于装炉温度");
+  if (rate <= 0) return alert("升温速率应大于 0");
+
+  const heatMin = Math.max(1, Math.round((th - t0) / rate * 60));
+  const arr = st + heatMin;
+  const holdEnd = arr + hold;
+  const coolMin = $("#cool").value === "water"
+    ? 2
+    : Math.max(1, Math.round((th - coolTo) / Math.max(0.1, coolRate)));
+  state.rows = [
+    { t: fmtTime(st), T: t0 },
+    { t: fmtTime(arr), T: th },
+    { t: fmtTime(holdEnd), T: th },
+    { t: fmtTime(holdEnd + coolMin), T: coolTo },
+  ];
+  renderRows();
+  save();
+  draw();
+}
+
+/* ---------- 导出 ---------- */
+function crc32(buf) {
+  let c, crc = 0xffffffff;
+  for (let n = 0; n < buf.length; n++) {
+    c = (crc ^ buf[n]) & 0xff;
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+    crc = (crc >>> 8) ^ c;
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+async function withDpi(blob, dpi) {
+  const bin = new Uint8Array(await blob.arrayBuffer());
+  const ppm = Math.round(dpi / 0.0254);
+  const chunk = new Uint8Array(21);
+  const dv = new DataView(chunk.buffer);
+  dv.setUint32(0, 9);
+  chunk.set([0x70, 0x48, 0x59, 0x73], 4);           // pHYs
+  dv.setUint32(8, ppm);
+  dv.setUint32(12, ppm);
+  chunk[16] = 1;                                     // 单位：米
+  dv.setUint32(17, crc32(chunk.subarray(4, 17)));
+  // 插到 IHDR 之后
+  let pos = 8, insertAt = 8;
+  while (pos < bin.length) {
+    const len = (bin[pos] << 24 | bin[pos + 1] << 16 | bin[pos + 2] << 8 | bin[pos + 3]) >>> 0;
+    const type = String.fromCharCode(bin[pos + 4], bin[pos + 5], bin[pos + 6], bin[pos + 7]);
+    pos += 12 + len;
+    if (type === "IHDR") { insertAt = pos; break; }
+  }
+  const out = new Uint8Array(bin.length + chunk.length);
+  out.set(bin.subarray(0, insertAt), 0);
+  out.set(chunk, insertAt);
+  out.set(bin.subarray(insertAt), insertAt + chunk.length);
+  return new Blob([out], { type: "image/png" });
+}
+
+async function exportPNG() {
+  const keep = state.blank;
+  state.blank = $("#blank").checked;
+  draw();
+  const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+  state.blank = keep;
+  draw();
+  const final = await withDpi(blob, state.dpi);
+  const name = `热处理记录_${state.batch || "未命名"}_${String(state.date).replace(/[\/\\]/g, "-")}.png`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(final);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+/* ---------- 绑定 ---------- */
+const binders = [
+  ["sheet", "value"], ["dia", "number"], ["dpi", "number"],
+  ["startTime", "value"], ["t0", "number"], ["rate", "number"], ["th", "number"],
+  ["hold", "number"], ["cool", "value"], ["coolTo", "number"], ["coolRate", "number"],
+  ["batch", "value"], ["date", "value"], ["blank", "checked"],
+];
+binders.forEach(([id, kind]) => {
+  const el = $("#" + id);
+  el.addEventListener("input", () => {
+    state[id] = kind === "number" ? +el.value : kind === "checked" ? el.checked : el.value;
+    save();
+    draw();
+  });
+});
+$("#gen").addEventListener("click", generate);
+$("#export").addEventListener("click", exportPNG);
+$("#add").addEventListener("click", () => {
+  const last = state.rows[state.rows.length - 1] || { t: "08:00", T: 20 };
+  state.rows.push({ t: last.t, T: last.T });
+  renderRows(); save(); draw();
+});
+$("#clear").addEventListener("click", () => { state.rows = []; renderRows(); save(); draw(); });
+
+/* ---------- 本地保存 ---------- */
+const KEY = "ht-chart-v1";
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    Object.assign(state, s);
+    for (const [id] of binders) {
+      const el = $("#" + id);
+      if (!el) continue;
+      if (el.type === "checkbox") el.checked = !!state[id];
+      else el.value = state[id];
+    }
+  } catch (e) {}
+}
+
+load();
+renderRows();
+draw();
+
+const params = new URLSearchParams(location.search);
+if (params.has("blank")) {
+  state.blank = true;
+  $("#blank").checked = true;
+  draw();
+  renderRows();
+}
+if (params.has("bare")) {
+  $("#panel").style.display = "none";
+  $("#stage").style.padding = "0";
+  $("#stage").style.alignItems = "flex-start";
+  cv.style.maxWidth = "none";
+  cv.style.maxHeight = "none";
+  cv.style.boxShadow = "none";
+  document.body.style.background = "#fff";
+}
+</script>
+</body>
+</html>
